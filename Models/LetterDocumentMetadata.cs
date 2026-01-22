@@ -48,14 +48,17 @@ namespace SPP2LetterSearch.Models
         {
             try
             {
-                var idx = FolderName.IndexOf(Constants.LetterFolderPattern, StringComparison.OrdinalIgnoreCase);
-                if (idx >= 0)
+                foreach (var pattern in Constants.LetterFolderPatterns)
                 {
-                    var startIdx = idx + Constants.LetterFolderPattern.Length;
-                    if (startIdx + Constants.LetterNumberLength <= FolderName.Length)
+                    var idx = FolderName.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+                    if (idx >= 0)
                     {
-                        LetterNo = FolderName.Substring(startIdx, Constants.LetterNumberLength);
-                        return;
+                        var startIdx = idx + pattern.Length;
+                        if (startIdx + Constants.LetterNumberLength <= FolderName.Length)
+                        {
+                            LetterNo = FolderName.Substring(startIdx, Constants.LetterNumberLength);
+                            return;
+                        }
                     }
                 }
                 LetterNo = "0000";

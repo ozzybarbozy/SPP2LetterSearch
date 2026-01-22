@@ -19,13 +19,15 @@ namespace SPP2LetterSearch.Services
     {
         private readonly LoggingService _logger;
         private readonly PdfTextExtractor _pdfExtractor;
+        private readonly DocxTextExtractor _docxExtractor;
         private readonly MetadataStore _metadataStore;
         private readonly string _indexPath;
 
-        public IndexService(LoggingService logger, PdfTextExtractor pdfExtractor, MetadataStore metadataStore)
+        public IndexService(LoggingService logger, PdfTextExtractor pdfExtractor, DocxTextExtractor docxExtractor, MetadataStore metadataStore)
         {
             _logger = logger;
             _pdfExtractor = pdfExtractor;
+            _docxExtractor = docxExtractor;
             _metadataStore = metadataStore;
             _indexPath = Constants.IndexPath;
             EnsureIndexDirectory();
@@ -62,7 +64,13 @@ namespace SPP2LetterSearch.Services
             try
             {
                 var letterFolders = Directory.GetDirectories(rootFolder)
-                    .Where(d => Path.GetFileName(d).StartsWith(Constants.LetterFolderPattern, StringComparison.OrdinalIgnoreCase))
+                    .Where(d =>
+                    {
+                        var name = Path.GetFileName(d);
+
+                        return Constants.LetterFolderPatterns.Any(p =>
+                            name.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+                    })
                     .OrderBy(x => x)
                     .ToList();
 
@@ -92,20 +100,22 @@ namespace SPP2LetterSearch.Services
 
                         progress?.Report((letterFolders.Count, indexedCount, folderName));
 
-                        var pdfFiles = Directory.GetFiles(folder, "*.pdf");
-                        if (pdfFiles.Length == 0)
+                        var documentFiles = Directory.GetFiles(folder, "*.pdf")
+                            .Concat(Directory.GetFiles(folder, "*.docx"))
+                            .ToArray();
+                        if (documentFiles.Length == 0)
                         {
-                            _logger.Log($"No PDF files found in {folderName}");
+                            _logger.Log($"No document files found in {folderName}");
                             continue;
                         }
 
-                        foreach (var pdfPath in pdfFiles)
+                        foreach (var filePath in documentFiles)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            var fileName = Path.GetFileName(pdfPath);
+                            var fileName = Path.GetFileName(filePath);
 
-                            var metadata = new LetterDocumentMetadata(folderName, fileName, pdfPath);
+                            var metadata = new LetterDocumentMetadata(folderName, fileName, filePath);
                             processedIds.Add(metadata.Id);
 
                             bool needsReindexing = !existingMetadata.ContainsKey(metadata.Id) ||
@@ -115,10 +125,12 @@ namespace SPP2LetterSearch.Services
                             {
                                 _logger.Log($"Indexing: {folderName}/{fileName}");
 
-                                var content = _pdfExtractor.ExtractText(pdfPath);
+                                var content = Path.GetExtension(filePath).ToLowerInvariant() == ".docx"
+                                    ? _docxExtractor.ExtractText(filePath)
+                                    : _pdfExtractor.ExtractText(filePath);
                                 if (string.IsNullOrWhiteSpace(content))
                                 {
-                                    _logger.Log($"Warning: No text extracted from {pdfPath}");
+                                    _logger.Log($"Warning: No text extracted from {filePath}");
                                     continue;
                                 }
 

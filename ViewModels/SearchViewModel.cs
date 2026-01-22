@@ -106,8 +106,9 @@ namespace SPP2LetterSearch.ViewModels
             SearchResults = new ObservableCollection<SearchResultItem>();
             _logger = new LoggingService();
             var pdfExtractor = new PdfTextExtractor(_logger);
+            var docxExtractor = new DocxTextExtractor(_logger);
             var metadataStore = new MetadataStore(_logger);
-            _indexService = new IndexService(_logger, pdfExtractor, metadataStore);
+            _indexService = new IndexService(_logger, pdfExtractor, docxExtractor, metadataStore);
             _searchService = new SearchService(_logger);
             _openOnDoubleClick = true;
 

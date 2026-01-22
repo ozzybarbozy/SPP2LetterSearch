@@ -2,7 +2,7 @@
 # This script ensures only ONE window opens
 
 # Stop any existing instances
-$existing = Get-Process SPP2LetterSearch -ErrorAction SilentlyContinue
+$existing = Get-Process -Name "SPP2LetterSearch" -ErrorAction SilentlyContinue
 if ($existing) {
     Write-Host "Closing existing instances..." -ForegroundColor Yellow
     $existing | Stop-Process -Force
@@ -11,13 +11,17 @@ if ($existing) {
 
 # Launch fresh instance
 $exePath = "c:\LetterMaster\SPP2LetterSearch\bin\Debug\net8.0-windows\SPP2LetterSearch.exe"
+$projectPath = "c:\LetterMaster\SPP2LetterSearch"
 
 if (Test-Path $exePath) {
     Write-Host "Launching SPP2 Letter Search..." -ForegroundColor Green
     Start-Process -FilePath $exePath
-} else {
+}
+else {
     Write-Host "Executable not found. Building first..." -ForegroundColor Yellow
-    cd "c:\LetterMaster\SPP2LetterSearch"
+
+    Set-Location -Path $projectPath
     dotnet build
+
     Start-Process -FilePath $exePath
 }
